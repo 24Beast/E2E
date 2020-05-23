@@ -27,7 +27,7 @@ class Main_Page(Resource):
         username = json_data["user_name"]
         os.mkdir(username)
         os.mkdir(output_dir+username)
-        p = subprocess.run(["python","Test_2.py",username])
+        p = subprocess.run(["python","Test_1.py",username])
         return {"Happy":"Noises"}
 
 class User_Page(Resource):
