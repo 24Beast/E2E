@@ -40,7 +40,7 @@ class Config:
        self.client_ip = "local_host"
        self.send_port_client = 6666
        
-conf,_ = Config()
+conf = Config()
 if conf.mod == 'flx':
     import flx as model
 else:
