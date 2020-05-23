@@ -8,10 +8,8 @@ import numpy as np
 import tensorflow as tf
 from win32api import GetSystemMetrics
 import win32gui
-import sys
-from threading import Thread, Lock
+from threading import Thread
 import multiprocessing as mp
-from config import get_config
 import pickle
 import math
 import os
@@ -36,9 +34,7 @@ class Config:
        self.width = 64
        self.agl_dim = 2
        self.channel = 3
-       self.receiver_port_2 = 6666
-       self.client_ip = "local_host"
-       self.send_port_client = 6666
+       self.encoded_agl_dim = 16
        
 conf = Config()
 if conf.mod == 'flx':
@@ -350,6 +346,8 @@ class gaze_redirection_system:
         redir = False
         size_window = [659,528]
         t = time.time()
+        cv2.namedWindow(conf.uid)
+        cv2.moveWindow(conf.uid, int(Rs[0]/2)-int(size_window[0]/2),int(Rs[1]/2)-int(size_window[1]/2))
         while self.count:
             self.count-=1
             if not(self.count):
@@ -360,38 +358,37 @@ class gaze_redirection_system:
             self.count=20
             recv_frame = cv2.imread(name_dir+"/"+items[-1])
             os.remove(name_dir+"/"+items[0])
-            if ret:
-                cv2.imshow(conf.uid,recv_frame)
-                if recv_frame is not None:
-                    # redirected gaze
-                    if redir:
-                        frame = recv_frame.copy()
-                        try:
-                            tag = self.redirect_gaze(frame,shared_v,lock)
-                        except:
-                            pass
-                    else:
-                        result, imgencode = cv2.imencode('.jpg', recv_frame, self.encode_param)
-                        data = pickle.dumps(imgencode, 0)
-                        self.client_socket.sendall(struct.pack("L", len(data)) + data)
-                        redir = True
-
-                    if (time.time() - t) > 1:
-                        t = time.time()
-
-                    k = cv2.waitKey(10)
-                    if k == ord('q'):
-                        data = pickle.dumps('stop')
-                        self.client_socket.sendall(struct.pack("L", len(data))+data)
-                        time.sleep(3)
-                        cv2.destroyWindow(conf.uid)
-                        self.client_socket.shutdown(socket.SHUT_RDWR)
-                        self.client_socket.close()
-                        self.L_sess.close()
-                        self.R_sess.close()
-                        break
-                    else:
+            cv2.imshow(conf.uid,recv_frame)
+            if recv_frame is not None:
+                # redirected gaze
+                if redir:
+                    frame = recv_frame.copy()
+                    try:
+                        tag = self.redirect_gaze(frame,shared_v,lock)
+                    except:
                         pass
+                else:
+                    result, imgencode = cv2.imencode('.jpg', recv_frame, self.encode_param)
+                    data = pickle.dumps(imgencode, 0)
+                    self.client_socket.sendall(struct.pack("L", len(data)) + data)
+                    redir = True
+
+                if (time.time() - t) > 1:
+                    t = time.time()
+
+                k = cv2.waitKey(10)
+                if k == ord('q'):
+                    data = pickle.dumps('stop')
+                    self.client_socket.sendall(struct.pack("L", len(data))+data)
+                    time.sleep(3)
+                    cv2.destroyWindow(conf.uid)
+                    self.client_socket.shutdown(socket.SHUT_RDWR)
+                    self.client_socket.close()
+                    self.L_sess.close()
+                    self.R_sess.close()
+                    break
+                else:
+                    pass
 
 
 if __name__ == '__main__':
@@ -406,4 +403,3 @@ if __name__ == '__main__':
     gz_thread.start()
     vs_thread.join()
     gz_thread.join()
-
